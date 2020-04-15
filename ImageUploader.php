@@ -13,7 +13,7 @@ class ImageUploader {
       $this->_validateUpload();
 
       // type check
-      $ext = $this->_validateImageType();
+      $text = $this->_validateImageType();
       // var_dump($ext);
       // exit;
 
@@ -23,13 +23,47 @@ class ImageUploader {
       // create thumbnail
       $this->_createThumbnail($savePath);
 
+      $_SESSION['success'] = 'Upload Done!';
     } catch (\Exception $e) {
-      echo $e->getMessage();
-      exit;
+      $_SESSION['error'] = $e->getMessage();
+      // exit;
     }
     // redirect
     header('Location: http://' . $_SERVER['HTTP_HOST']);
     exit;
+  }
+
+  public function getResults() {
+    $success = null;
+    $error = null;
+    if (isset($_SESSION['success'])) {
+      $success = $_SESSION['success'];
+      unset($_SESSION['success']);
+    }
+    if (isset($_SESSION['error'])) {
+      $error = $_SESSION['error'];
+      unset($_SESSION['error']);
+    }
+    return [$success, $error];
+  }
+
+  public function getImages() {
+    $images = [];
+    $files = [];
+    $imageDir = opendir(IMAGES_DIR);
+    while (false !== ($file = readdir($imageDir))) {
+      if ($file === '.' || $file === '..') {
+        continue;
+      }
+      $files[] = $file;
+      if (file_exists(THUMBNAIL_DIR . '/' . $file)) {
+        $images[] = basename(THUMBNAIL_DIR) . '/' . $file;
+      } else {
+        $images[] = basename(IMAGES_DIR) . '/' . $file;
+      }
+    }
+    array_multisort($files, SORT_DESC, $images);
+    return $images;
   }
 
   private function _createThumbnail($savePath) {
@@ -113,7 +147,7 @@ class ImageUploader {
         return true;
       case UPLOAD_ERR_INI_SIZE:
       case UPLOAD_ERR_FORM_SIZE:
-        throw new \Exception('File too large!');
+        throw new \Exception('ファイルサイズが大きいです!');
       default:
         throw new \Exception('Err: ' . $_FILES['image']['error']);
     }
